@@ -6,7 +6,7 @@ export function ImageGalleryItem({
   handleOpenModal,
 }) {
   return (
-    <li className={css.imageGalleryItem}>
+    <li className="{css.imageGalleryItem}">
       <img
         className={css.imageGalleryItemImage}
         src={picture}

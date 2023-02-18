@@ -11,7 +11,9 @@ export function ImageGallery({ images, handleOpenModal }) {
               key={image.id}
               picture={image.webformatURL}
               handleOpenModal={handleOpenModal}
-              largeImageURL={image.largeImageURL}
+              largeImageURL={
+                image.largeImageURL ?? alert('картини не знайдено')
+              }
             />
           );
         })}

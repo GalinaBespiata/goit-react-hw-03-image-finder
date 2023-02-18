@@ -11,7 +11,7 @@ import axios from 'axios';
 export class App extends Component {
   state = {
     images: [],
-    //  JSON.parse(localStorage.getItem('images')) ?? [],
+    isHidden: false,
     loading: false,
     error: null,
     modalIsOpen: false,
@@ -23,28 +23,35 @@ export class App extends Component {
   fetchImages = async () => {
     try {
       this.setState({ loading: true });
-      const { data } = await axios.get(
-        ` https://pixabay.com/api/?q=${this.state.query}&page=${Number(
-          this.state.page
-        )}&key=32908918-e7cc5cba0888a51be5caa34d0&image_type=photo&orientation=horizontal&per_page=12`
-      );
 
-      console.log(data);
+      const { data } = await axios.get(
+        ` https://pixabay.com/api/?q=${this.state.query}&page=${this.state.page}&key=32908918-e7cc5cba0888a51be5caa34d0&image_type=photo&orientation=horizontal&per_page=12`
+      );
       this.setState({ images: data.hits });
-      console.log(this.state.images);
+
+      if (data.total / 12 <= this.state.page) {
+        this.setState({ isHidden: true });
+      }
     } catch (error) {
       this.setState({ error: error.message });
     } finally {
       this.setState({ loading: false });
     }
   };
-
+  showImagesFromTop() {
+    const sortedImages = this.state.images.slice().reverse();
+    this.setState({ images: sortedImages });
+  }
   componentDidMount() {
     this.fetchImages();
   }
 
   componentDidUpdate(_, prevState) {
     if (prevState.query !== this.state.query) {
+      this.setState({ page: 1 });
+      this.fetchImages();
+    } else if (prevState.page !== this.state.page) {
+      this.showImagesFromTop();
       this.fetchImages();
     }
   }
@@ -73,7 +80,8 @@ export class App extends Component {
           images={this.state.images}
           handleOpenModal={this.handleOpenModal}
         />
-        <ButtonLoadMore onClick={this.loadMore} />
+        {!this.state.isHidden ||
+          this.state.loading & <ButtonLoadMore onClick={this.loadMore} />}
         {this.state.modalIsOpen && (
           <Modal
             largeUrl={this.state.selectedImage}
