@@ -3,15 +3,15 @@ import { Component } from 'react';
 import { SearchBar } from './SearchBar/SearchBar.jsx';
 import { Loader } from './Loader/Loader.jsx';
 import { ImageGallery } from './ImageGallery/ImageGallery.jsx';
-import { ImageGalleryItem } from './ImageGalleryItem/ImageGalleryItem.jsx';
+import { getFetch } from 'services/api.js';
 import { ButtonLoadMore } from './Button/ButtonLoadMore.jsx';
 import { Modal } from './Modal/Modal.jsx';
-import axios from 'axios';
 
 export class App extends Component {
   state = {
     images: [],
-    isHidden: false,
+    totalImages: 0,
+    // isHidden: false,
     loading: false,
     error: null,
     modalIsOpen: false,
@@ -21,37 +21,28 @@ export class App extends Component {
   };
 
   fetchImages = async () => {
+    const { query, page } = this.state;
     try {
       this.setState({ loading: true });
+      const data = await getFetch(query, page);
 
-      const { data } = await axios.get(
-        ` https://pixabay.com/api/?q=${this.state.query}&page=${this.state.page}&key=32908918-e7cc5cba0888a51be5caa34d0&image_type=photo&orientation=horizontal&per_page=12`
-      );
-      this.setState({ images: data.hits });
-
-      if (data.total / 12 <= this.state.page) {
-        this.setState({ isHidden: true });
-      }
+      this.setState(prevState => {
+        return {
+          images: [...prevState.images, ...data.hits],
+          error: null,
+          totalImages: data.totalHits,
+        };
+      });
     } catch (error) {
       this.setState({ error: error.message });
     } finally {
       this.setState({ loading: false });
     }
   };
-  showImagesFromTop() {
-    const sortedImages = this.state.images.slice().reverse();
-    this.setState({ images: sortedImages });
-  }
-  componentDidMount() {
-    this.fetchImages();
-  }
 
   componentDidUpdate(_, prevState) {
-    if (prevState.query !== this.state.query) {
-      this.setState({ page: 1 });
-      this.fetchImages();
-    } else if (prevState.page !== this.state.page) {
-      this.showImagesFromTop();
+    const { query, page } = this.state;
+    if (prevState.query !== query || prevState.page !== page) {
       this.fetchImages();
     }
   }
@@ -65,30 +56,31 @@ export class App extends Component {
     this.setState({ modalIsOpen: false, selectedImage: null });
   };
   getQuery = query => {
-    this.setState({ query: query, page: 1, images: [] });
+    this.setState({ query, page: 1, images: [], totalImages: 0 });
   };
   render() {
-    return (
-      <div style={{ position: 'relative' }}>
-        <SearchBar onSubmit={this.getQuery} />
-        {this.state.loading && <Loader />}
+    const {
+      images,
+      totalImages,
 
-        {this.state.error !== null && (
-          <p>Ooops, we have mistake!!! {this.state.error}</p>
+      loading,
+      error,
+      modalIsOpen,
+      selectedImage,
+    } = this.state;
+    return (
+      <div style={{ position: 'relative', textAlign: 'center' }}>
+        <SearchBar onSubmit={this.getQuery} />
+
+        {error !== null && <p>Ooops, we have mistake!!! {error}</p>}
+        <ImageGallery images={images} handleOpenModal={this.handleOpenModal} />
+        {loading && <Loader />}
+        {!loading && totalImages !== images.length && (
+          <ButtonLoadMore onClick={this.loadMore} />
         )}
-        <ImageGallery
-          images={this.state.images}
-          handleOpenModal={this.handleOpenModal}
-        />
-        {!this.state.isHidden ||
-          this.state.loading & <ButtonLoadMore onClick={this.loadMore} />}
-        {this.state.modalIsOpen && (
-          <Modal
-            largeUrl={this.state.selectedImage}
-            closeModal={this.closeModal}
-          />
+        {modalIsOpen && (
+          <Modal largeUrl={selectedImage} closeModal={this.closeModal} />
         )}
-        <ImageGalleryItem />
       </div>
     );
   }
